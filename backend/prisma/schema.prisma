@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+
+
+model Class {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  teacherSubjects TeacherSubjectClass[]
+  timetable       Timetable[]
+}
+
+model Teacher {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  subjects     TeacherSubject[]
+  availability TeacherAvailability[]
+}
+
+model Subject {
+  id        String           @id @default(uuid())
+  name      String           @unique
+  createdAt DateTime         @default(now())
+  teachers  TeacherSubject[]
+}
+
+model TeacherSubject {
+  id             String   @id @default(uuid())
+  teacherId      String
+  subjectId      String
+  periodsPerWeek Int
+  allClasses     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  classes   TeacherSubjectClass[]
+  timetable Timetable[]
+
+  @@index([teacherId])
+  @@index([subjectId])
+  @@map("teacher_subjects")
+}
+
+model TeacherSubjectClass {
+  id               String   @id @default(uuid())
+  teacherSubjectId String
+  classId          String
+  createdAt        DateTime @default(now())
+
+  teacherSubject TeacherSubject @relation(fields: [teacherSubjectId], references: [id], onDelete: Cascade)
+  class          Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherSubjectId, classId])
+}
+
+model Day {
+  id   String @id @default(uuid())
+  name String @unique
+
+  timeTable    Timetable[]
+  availability TeacherAvailability[]
+}
+
+model Period {
+  id         Int       @id @default(autoincrement())
+  number     Int       @unique
+  start_time DateTime?
+  end_time   DateTime?
+
+  timetable    Timetable[]
+  availability TeacherAvailability[]
+}
+
+model Timetable {
+  id               String   @id @default(uuid())
+  classId          String
+  teacherSubjectId String
+  dayId            String
+  periodId         Int
+  createdAt        DateTime @default(now())
+
+  class          Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacherSubject TeacherSubject @relation(fields: [teacherSubjectId], references: [id], onDelete: Cascade)
+  day            Day            @relation(fields: [dayId], references: [id])
+  period         Period         @relation(fields: [periodId], references: [id])
+
+  @@unique([classId, dayId, periodId])
+}
+
+model TimetableConfig {
+  id            String   @id @default(uuid())
+  daysPerWeek   Int      @default(6)
+  periodsPerDay Int      @default(6)
+  updatedAt     DateTime @default(now())
+}
+
+model TeacherAvailability {
+  id          String   @id @default(uuid())
+  teacherId   String
+  dayId       String
+  periodId    Int
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  day     Day     @relation(fields: [dayId], references: [id])
+  period  Period  @relation(fields: [periodId], references: [id])
+
+  @@unique([teacherId, dayId, periodId])
+}
